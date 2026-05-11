@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pr-emojis — fun emojis on every PR title</title>
+    <meta
+      name="description"
+      content="A GitHub App that prepends two funny, relevant emojis to every PR title. Install once, covers all repos."
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --fg: #111;
+        --muted: #555;
+        --bg: #fafafa;
+        --card: #fff;
+        --accent: #1f6feb;
+        --border: #e5e5e5;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fg: #f0f0f0;
+          --muted: #aaa;
+          --bg: #0d0d0d;
+          --card: #161616;
+          --accent: #58a6ff;
+          --border: #262626;
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter,
+          Helvetica, Arial, sans-serif;
+        color: var(--fg);
+        background: var(--bg);
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 64px 24px 80px;
+      }
+      header h1 {
+        font-size: 44px;
+        margin: 0 0 8px;
+        letter-spacing: -0.02em;
+      }
+      header p {
+        font-size: 18px;
+        color: var(--muted);
+        margin: 0 0 32px;
+      }
+      .example {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin: 24px 0;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+        font-size: 14px;
+      }
+      .example .before { color: var(--muted); text-decoration: line-through; }
+      .example .arrow { color: var(--muted); margin: 0 8px; }
+      .cta {
+        display: inline-block;
+        background: var(--accent);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+        padding: 12px 22px;
+        border-radius: 8px;
+        margin: 8px 0 32px;
+      }
+      .cta:hover { filter: brightness(1.08); }
+      h2 {
+        font-size: 20px;
+        margin: 40px 0 8px;
+      }
+      ul { padding-left: 22px; }
+      li { margin: 4px 0; }
+      .small {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 48px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+      }
+      code {
+        background: var(--card);
+        border: 1px solid var(--border);
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>pr-emojis 🎉 🚀</h1>
+        <p>
+          A GitHub App that prepends two funny, relevant emojis to every pull
+          request title. Install once — covers all your repos, present and
+          future.
+        </p>
+      </header>
+
+      <div class="example">
+        <div><span class="before">Fix leak on error case</span></div>
+        <div>Fix leak on error case <span>💧 🪣</span></div>
+      </div>
+
+      <a class="cta" href="https://github.com/apps/pr-emojis/installations/new">
+        Install on GitHub →
+      </a>
+
+      <h2>What it does</h2>
+      <ul>
+        <li>Picks two relevant emojis for each new PR title and appends them.</li>
+        <li>Re-runs if you rename the PR before the emojis are there.</li>
+        <li>Skips titles that already end with emojis.</li>
+        <li>Never creates a failing check or comment.</li>
+      </ul>
+
+      <h2>Permissions</h2>
+      <ul>
+        <li><code>pull_requests: write</code> — to read and patch PR titles.</li>
+        <li><code>metadata: read</code> — auto-granted, mandatory.</li>
+      </ul>
+      <p>
+        No <code>contents</code> permission — the app cannot read your code.
+      </p>
+
+      <h2>Privacy</h2>
+      <p>
+        GitHub's <code>pull_request</code> webhook payload includes the PR title
+        <em>and body</em>. We only use the title, and we don't persist either —
+        but both pass through the worker that runs this app. If a team puts
+        secrets in PR bodies, that's data crossing third-party infrastructure.
+      </p>
+
+      <p class="small">
+        Open source · MIT ·
+        <a href="https://github.com/felixwotschofsky/pr-emojis">source</a>
+      </p>
+    </main>
+  </body>
+</html>

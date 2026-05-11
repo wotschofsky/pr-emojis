@@ -1,0 +1,22 @@
+[
+  { "repo": "torvalds/linux", "title": "bpf: Validate node_id in arena_alloc_pages()" },
+  { "repo": "torvalds/linux", "title": "bpf: Dissociate struct_ops program with map if map_update fails" },
+  { "repo": "facebook/react", "title": "[Flight] Never parse \"then\" functions (#35289)" },
+  { "repo": "facebook/react", "title": "[react-dom/server] Fix hanging on Deno (#35235)" },
+  { "repo": "microsoft/vscode", "title": "promptValidator: log error (#311899)" },
+  { "repo": "microsoft/vscode", "title": "Tweak comments" },
+  { "repo": "kubernetes/kubernetes", "title": "Bump go.yaml.in/yaml/v2 to 2.4.4" },
+  { "repo": "kubernetes/kubernetes", "title": "kubectl: deprecate run filename flag" },
+  { "repo": "nodejs/node", "title": "tools: fix auto-start-ci" },
+  { "repo": "nodejs/node", "title": "stream: add fast paths for webstreams read and pipeTo" },
+  { "repo": "vercel/next.js", "title": "v16.3.0-canary.8" },
+  { "repo": "vercel/next.js", "title": "Remove leftover Turbopack manifests (#93398)" },
+  { "repo": "flutter/flutter", "title": "Enable SPM for GoogleMobileAds (#185548)" },
+  { "repo": "flutter/flutter", "title": "Fix leak on error case (#185516)" },
+  { "repo": "django/django", "title": "Added stub release notes for 6.0.6." },
+  { "repo": "django/django", "title": "Removed hardcoded pks in annotations and delete_regress tests." },
+  { "repo": "pytorch/pytorch", "title": "Fix typos in comments and error messages (#181965)" },
+  { "repo": "pytorch/pytorch", "title": "[CI] Check installed git version during Docker build (#182228)" },
+  { "repo": "golang/go", "title": "cmd/go: should use flagSet instead of default one" },
+  { "repo": "golang/go", "title": "debug/elf: remove misleading TODO comment" }
+]
