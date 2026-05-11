@@ -68,7 +68,15 @@ Create a new GitHub App with these settings:
 - **Subscribe to events:** Pull request.
 - **Where can this be installed?** Any account.
 
-Then generate a private key and download the PEM.
+Then generate a private key and download the PEM. **Convert it to PKCS#8** — GitHub hands you PKCS#1 (`-----BEGIN RSA PRIVATE KEY-----`), which `universal-github-app-jwt` (used by octokit on Workers) cannot sign with even with `nodejs_compat`:
+
+```sh
+openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt \
+  -in your-app.private-key.pem \
+  -out your-app.pkcs8.pem
+```
+
+The output should start with `-----BEGIN PRIVATE KEY-----` (no `RSA`).
 
 ### 2. Cloudflare setup
 
@@ -78,14 +86,16 @@ wrangler kv namespace create LOCKS
 # paste the returned id into wrangler.toml
 ```
 
-Push the secrets:
+Push the secrets — pipe the PEM in from a file so newlines are preserved (pasting often collapses to one line and silently breaks JWT signing):
 
 ```sh
 wrangler secret put GITHUB_APP_ID
 wrangler secret put GITHUB_WEBHOOK_SECRET
-wrangler secret put GITHUB_APP_PRIVATE_KEY      # paste the PEM
+wrangler secret put GITHUB_APP_PRIVATE_KEY < your-app.pkcs8.pem
 wrangler secret put GOOGLE_GENERATIVE_AI_API_KEY
 ```
+
+After deploying, hit `/healthz` — it verifies all four secrets are present, KV is reachable, and a GitHub App JWT can actually be signed with the uploaded key. A 200 means you're wired up correctly; a 503 names the failed check.
 
 ### 3. Local dev
 
