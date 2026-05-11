@@ -11,5 +11,5 @@ export function makeModel(env: Env): LanguageModel {
   const google = createGoogleGenerativeAI({
     apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
   });
-  return google("gemma-4");
+  return google("gemma-4-26b-a4b-it");
 }
