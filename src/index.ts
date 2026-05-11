@@ -4,6 +4,7 @@ import type { Env } from "./env.ts";
 import { newRequestLogger } from "./logger.ts";
 import { createApp, type PullRefs } from "./github.ts";
 import { titleEndsWithEmoji } from "./emoji.ts";
+import { runHealthChecks } from "./health.ts";
 import { processPr } from "./processor.ts";
 
 interface MinimalPullRequestEvent {
@@ -16,7 +17,10 @@ interface MinimalPullRequestEvent {
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.get("/healthz", (c) => c.text("ok"));
+app.get("/healthz", async (c) => {
+  const result = await runHealthChecks(c.env);
+  return c.json(result, result.status === "ok" ? 200 : 503);
+});
 
 app.post("/webhook", async (c) => {
   const log = newRequestLogger(c.req.raw, c.executionCtx);
