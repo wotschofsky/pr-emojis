@@ -1,7 +1,14 @@
 import { generateText, type LanguageModel } from "ai";
 
 export const PROMPT_TEMPLATE = (title: string) =>
-  `Given this PR title, reply with exactly two emojis that are funny and relevant. Reply with only the emojis, no text.\n\nTitle: ${title}`;
+  [
+    "Given this PR title, reply with exactly two funny, relevant emojis.",
+    "The entire response must contain only those two emojis.",
+    "No words, labels, punctuation, quotes, markdown, explanation, or extra emojis.",
+    "Separate the two emojis with a single space.",
+    "",
+    `Title: ${title}`,
+  ].join("\n");
 
 export interface PickEmojisInput {
   model: LanguageModel;
@@ -33,6 +40,34 @@ export function extractEmojis(s: string): string[] {
 }
 
 /**
+ * Validates the exact model response. Whitespace is allowed as a separator or
+ * around the response, but every non-whitespace grapheme must be one of exactly
+ * two emoji graphemes.
+ */
+export function parseExactEmojiResponse(s: string): [string, string] {
+  const emojis: string[] = [];
+
+  for (const seg of segmenter.segment(s)) {
+    const g = seg.segment;
+    if (/^\s+$/.test(g)) continue;
+    if (!isEmojiGrapheme(g)) {
+      throw new Error(
+        `parse_failed: response contains non-emoji content ${JSON.stringify(g)} in ${JSON.stringify(s)}`,
+      );
+    }
+    emojis.push(g);
+  }
+
+  if (emojis.length !== 2) {
+    throw new Error(
+      `parse_failed: expected exactly 2 emojis, got ${emojis.length} in ${JSON.stringify(s)}`,
+    );
+  }
+
+  return [emojis[0]!, emojis[1]!];
+}
+
+/**
  * Single attempt at picking two emojis. Throws on parse failure so the caller
  * can apply its retry policy. The caller also handles network / 5xx failures
  * thrown by the underlying provider.
@@ -45,14 +80,9 @@ export async function pickEmojis({
     model,
     prompt: PROMPT_TEMPLATE(title),
   });
-  const emojis = extractEmojis(text);
-  if (emojis.length < 2) {
-    throw new Error(
-      `parse_failed: expected ≥2 emojis, got ${emojis.length} in ${JSON.stringify(text)}`,
-    );
-  }
+  const emojis = parseExactEmojiResponse(text);
   return {
-    emojis: [emojis[0]!, emojis[1]!],
+    emojis,
     raw: text,
     usage: {
       inputTokens: usage?.inputTokens,
