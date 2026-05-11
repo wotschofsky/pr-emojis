@@ -21,17 +21,13 @@ export interface PickEmojisResult {
 const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
 
 /**
- * Picks emoji-shaped grapheme clusters out of a free-form string. We treat
- * "anything non-ASCII and non-whitespace" as a candidate emoji — sufficient
- * for filtering out stray punctuation or labels the model may include.
+ * Picks emoji-shaped grapheme clusters out of a free-form string.
  */
 export function extractEmojis(s: string): string[] {
   const out: string[] = [];
   for (const seg of segmenter.segment(s)) {
     const g = seg.segment;
-    if (/^\s+$/.test(g)) continue;
-    if (/^[\x00-\x7F]+$/.test(g)) continue;
-    out.push(g);
+    if (isEmojiGrapheme(g)) out.push(g);
   }
   return out;
 }
@@ -68,7 +64,7 @@ export async function pickEmojis({
 
 /**
  * Idempotency gate: does the title already end with at least one emoji
- * grapheme? Returns true if the last non-whitespace grapheme is non-ASCII.
+ * grapheme?
  */
 export function titleEndsWithEmoji(title: string): boolean {
   const trimmed = title.trimEnd();
@@ -76,11 +72,17 @@ export function titleEndsWithEmoji(title: string): boolean {
   let last: string | undefined;
   for (const seg of segmenter.segment(trimmed)) last = seg.segment;
   if (!last) return false;
-  if (/^\s+$/.test(last)) return false;
-  return !/^[\x00-\x7F]+$/.test(last);
+  return isEmojiGrapheme(last);
 }
 
 /** Composes the new title per the locked decision: `Original 🎉 🚀`. */
 export function composeTitle(original: string, emojis: [string, string]): string {
   return `${original.trimEnd()} ${emojis[0]} ${emojis[1]}`;
+}
+
+function isEmojiGrapheme(grapheme: string): boolean {
+  return (
+    /\p{Emoji_Presentation}/u.test(grapheme) ||
+    /\p{Emoji}\uFE0F/u.test(grapheme)
+  );
 }

@@ -33,16 +33,21 @@ GitHub's `pull_request` webhook payload includes the PR title **and body**. This
 - [Vercel AI SDK](https://sdk.vercel.ai) with `@ai-sdk/google` (Gemma 4, free tier)
 - [`evlog`](https://www.evlog.dev) for wide-event request logging
 - Workers KV for per-PR concurrency locks
+- Vitest for focused utility tests
 
 ## Project layout
 
 ```
 src/
-  index.ts    — Hono app, /webhook route, lock + retry + staleness logic
-  github.ts   — octokit App factory + PR get/patch helpers
-  emoji.ts    — pickEmojis() + prompt + grapheme parser
-  logger.ts   — evlog wide-event setup
-  env.ts      — typed bindings + secrets
+  index.ts      — Hono app and /webhook route
+  processor.ts  — background PR processing, lock orchestration, staleness logic
+  github.ts     — octokit App factory + PR get/patch helpers
+  emoji.ts      — pickEmojis() + prompt + grapheme parser
+  locks.ts      — Workers KV key helpers
+  retry.ts      — retry policy
+  model.ts      — production model construction
+  logger.ts     — evlog wide-event setup
+  env.ts        — typed bindings + secrets
 public/
   index.html  — landing page with the install button
 bench/
@@ -92,7 +97,14 @@ pnpm dev
 
 Use `gh webhook forward` or smee.io to relay GitHub deliveries to localhost.
 
-### 4. Deploy
+### 4. Test
+
+```sh
+pnpm typecheck
+pnpm test
+```
+
+### 5. Deploy
 
 ```sh
 pnpm deploy
