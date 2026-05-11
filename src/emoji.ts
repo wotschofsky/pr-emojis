@@ -6,8 +6,9 @@ export const PROMPT_TEMPLATE = (title: string) => dedent`
 
   Reply with exactly two funny, relevant emojis.
   The entire response must contain only those two emojis.
+  The two emojis must be different from each other.
   No words, labels, punctuation, quotes, markdown, explanation, or extra emojis.
-  Separate the two emojis with a single space.
+  Put the two emojis directly next to each other with no spaces or separators.
 
   What makes a great pick:
   - Lateral over literal. A bug fix doesn't need 🐛, a perf change doesn't need 🚀. Riff on a noun or verb in the title and find a sideways visual joke.
@@ -75,16 +76,15 @@ export function extractEmojis(s: string): string[] {
 }
 
 /**
- * Validates the exact model response. Whitespace is allowed as a separator or
- * around the response, but every non-whitespace grapheme must be one of exactly
- * two emoji graphemes.
+ * Parses the exact model response after removing whitespace. Every remaining
+ * grapheme must be one of exactly two emoji graphemes.
  */
 export function parseExactEmojiResponse(s: string): [string, string] {
+  const compact = s.replace(/\s+/gu, "");
   const emojis: string[] = [];
 
-  for (const seg of segmenter.segment(s)) {
+  for (const seg of segmenter.segment(compact)) {
     const g = seg.segment;
-    if (/^\s+$/.test(g)) continue;
     if (!isEmojiGrapheme(g)) {
       throw new Error(
         `parse_failed: response contains non-emoji content ${JSON.stringify(g)} in ${JSON.stringify(s)}`,
@@ -96,6 +96,11 @@ export function parseExactEmojiResponse(s: string): [string, string] {
   if (emojis.length !== 2) {
     throw new Error(
       `parse_failed: expected exactly 2 emojis, got ${emojis.length} in ${JSON.stringify(s)}`,
+    );
+  }
+  if (emojis[0] === emojis[1]) {
+    throw new Error(
+      `parse_failed: expected 2 different emojis, got duplicate ${JSON.stringify(emojis[0])} in ${JSON.stringify(s)}`,
     );
   }
 
@@ -140,9 +145,10 @@ export function titleEndsWithEmoji(title: string): boolean {
   return isEmojiGrapheme(last);
 }
 
-/** Composes the new title per the locked decision: `Original 🎉 🚀`. */
+/** Composes the new title per the locked decision: `Original 🎉🚀`. */
 export function composeTitle(original: string, emojis: [string, string]): string {
-  return `${original.trimEnd()} ${emojis[0]} ${emojis[1]}`;
+  const suffix = emojis.join("").replace(/\s+/gu, "");
+  return `${original.trimEnd()} ${suffix}`;
 }
 
 function isEmojiGrapheme(grapheme: string): boolean {

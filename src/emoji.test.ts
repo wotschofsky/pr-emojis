@@ -23,7 +23,7 @@ describe("extractEmojis", () => {
 });
 
 describe("parseExactEmojiResponse", () => {
-  it("accepts exactly two emojis separated by whitespace", () => {
+  it("removes whitespace before parsing exactly two emojis", () => {
     expect(parseExactEmojiResponse("💧 🪣")).toEqual(["💧", "🪣"]);
     expect(parseExactEmojiResponse("\n👍🏽 ✅\n")).toEqual(["👍🏽", "✅"]);
   });
@@ -42,6 +42,12 @@ describe("parseExactEmojiResponse", () => {
   it("rejects too few or too many emojis", () => {
     expect(() => parseExactEmojiResponse("🧪")).toThrow("parse_failed");
     expect(() => parseExactEmojiResponse("🧪 🚀 ✅")).toThrow("parse_failed");
+  });
+
+  it("rejects duplicate emojis", () => {
+    expect(() => parseExactEmojiResponse("🧪🧪")).toThrow(
+      "expected 2 different emojis",
+    );
   });
 
   it("rejects non-emoji Unicode content", () => {
@@ -67,7 +73,11 @@ describe("titleEndsWithEmoji", () => {
 
 describe("composeTitle", () => {
   it("trims trailing whitespace and appends two emojis", () => {
-    expect(composeTitle("Fix leak   ", ["💧", "🪣"])).toBe("Fix leak 💧 🪣");
+    expect(composeTitle("Fix leak   ", ["💧", "🪣"])).toBe("Fix leak 💧🪣");
+  });
+
+  it("removes whitespace from the generated emoji suffix", () => {
+    expect(composeTitle("Fix leak", ["💧 ", "\n🪣"])).toBe("Fix leak 💧🪣");
   });
 });
 
@@ -77,7 +87,10 @@ describe("PROMPT_TEMPLATE", () => {
 
     expect(prompt).toContain("exactly two");
     expect(prompt).toContain("only those two emojis");
+    expect(prompt).toContain("must be different");
     expect(prompt).toContain("No words");
     expect(prompt).toContain("extra emojis");
+    expect(prompt).toContain("no spaces or separators");
+    expect(prompt).toContain("Output: 🏁🏊");
   });
 });

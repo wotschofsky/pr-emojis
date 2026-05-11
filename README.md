@@ -3,7 +3,7 @@
 A GitHub App that prepends two relevant, funny emojis to the title of every pull request. Install once on your account or org → every repo, present and future, is covered.
 
 ```
-Fix leak on error case   →   Fix leak on error case 💧 🪣
+Fix leak on error case   →   Fix leak on error case 💧🪣
 ```
 
 ## What it does
