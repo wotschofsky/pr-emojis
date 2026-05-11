@@ -14,6 +14,9 @@ importers:
       ai:
         specifier: ^6.0.177
         version: 6.0.177(zod@4.4.3)
+      dedent:
+        specifier: ^1.7.2
+        version: 1.7.2
       evlog:
         specifier: ^2.17.0
         version: 2.17.0(ai@6.0.177(zod@4.4.3))(hono@4.12.18)(vite@8.0.12(@types/node@22.19.18)(esbuild@0.27.7)(tsx@4.21.0))
@@ -935,6 +938,14 @@ packages:
   cookie@1.1.1:
     resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
     engines: {node: '>=18'}
+
+  dedent@1.7.2:
+    resolution: {integrity: sha512-WzMx3mW98SN+zn3hgemf4OzdmyNhhhKz5Ay0pUfQiMQ3e1g+xmTJWp/pKdwKVXhdSkAEGIIzqeuWrL3mV/AXbA==}
+    peerDependencies:
+      babel-plugin-macros: ^3.1.0
+    peerDependenciesMeta:
+      babel-plugin-macros:
+        optional: true
 
   default-browser-id@5.0.1:
     resolution: {integrity: sha512-x1VCxdX4t+8wVfd1so/9w+vQ4vx7lKd2Qp5tDRutErwmR85OgmfX7RlLRMWafRMY7hbEiXIbudNrjOAPa/hL8Q==}
@@ -2063,6 +2074,8 @@ snapshots:
   convert-source-map@2.0.0: {}
 
   cookie@1.1.1: {}
+
+  dedent@1.7.2: {}
 
   default-browser-id@5.0.1: {}
 

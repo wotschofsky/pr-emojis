@@ -1,14 +1,49 @@
 import { generateText, type LanguageModel } from "ai";
+import dedent from "dedent";
 
-export const PROMPT_TEMPLATE = (title: string) =>
-  [
-    "Given this PR title, reply with exactly two funny, relevant emojis.",
-    "The entire response must contain only those two emojis.",
-    "No words, labels, punctuation, quotes, markdown, explanation, or extra emojis.",
-    "Separate the two emojis with a single space.",
-    "",
-    `Title: ${title}`,
-  ].join("\n");
+export const PROMPT_TEMPLATE = (title: string) => dedent`
+  You are picking emojis to append to a software-engineering pull request title — small visual jokes that brighten an engineer's day when they scan their PR list.
+
+  Reply with exactly two funny, relevant emojis.
+  The entire response must contain only those two emojis.
+  No words, labels, punctuation, quotes, markdown, explanation, or extra emojis.
+  Separate the two emojis with a single space.
+
+  What makes a great pick:
+  - Lateral over literal. A bug fix doesn't need 🐛, a perf change doesn't need 🚀. Riff on a noun or verb in the title and find a sideways visual joke.
+  - The two emojis should land as a pair — a tiny scene or punchline together, not two unrelated decorations.
+  - The whole Unicode emoji range is fair game; reach for less common ones when they nail the joke.
+  - Tease the code, not the author.
+
+  Examples:
+
+  Title: fix: prevent race condition in thread pool
+  Output: 🏁🏊
+
+  Title: Remove deprecated Python 2 support
+  Output: 🐍⚰️
+
+  Title: perf: reduce Docker image bloat
+  Output: 🐳🎈
+
+  Title: Untangle spaghetti dependencies in checkout flow
+  Output: 🍝🪢
+
+  Title: feat: lazy-load above-the-fold images
+  Output: 🖼️🛋️
+
+  Title: Optimize hot path in renderer
+  Output: 🔥🚶
+
+  Title: Sunset v1 API endpoints
+  Output: 1️⃣🌅
+
+  Title: Kill zombie processes on shutdown
+  Output: 🧟🔫
+
+  Title: ${title}
+  Output:
+`;
 
 export interface PickEmojisInput {
   model: LanguageModel;
