@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [[kv_namespaces]]
 binding = "LOCKS"
-id = "pr_emojis"
+id = "3a4215d2c1ec4d36985534de944d399b"
 
 # Static landing page served from /public at /.
 [assets]
