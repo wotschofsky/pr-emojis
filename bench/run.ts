@@ -20,6 +20,14 @@ interface Cell {
   latencyMs: number;
   inputTokens?: number;
   outputTokens?: number;
+  costUsd?: number;
+}
+
+interface ModelPricing {
+  /** USD per prompt (input) token. */
+  prompt: number;
+  /** USD per completion (output) token. */
+  completion: number;
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -39,43 +47,97 @@ async function main() {
     `Running ${corpus.length} titles × ${models.length} models = ${corpus.length * models.length} cells…`,
   );
 
-  // results[titleIdx][modelIdx]
-  const results: Cell[][] = corpus.map(() => []);
-
-  for (let m = 0; m < models.length; m++) {
-    const { label, model } = models[m]!;
-    console.log(`\n→ ${label}`);
-    for (let i = 0; i < corpus.length; i++) {
-      const { title } = corpus[i]!;
-      const cell = await runCell(model, title);
-      results[i]![m] = cell;
-      const status = cell.ok ? `${cell.emojis}` : `ERR: ${cell.error}`;
-      console.log(`   [${i + 1}/${corpus.length}] ${cell.latencyMs}ms  ${status}`);
+  const pricing = await fetchPricing(models.map((m) => m.slug));
+  for (const m of models) {
+    if (!pricing.has(m.slug)) {
+      console.warn(`  ! no pricing found for ${m.slug} — cost will be reported as $0`);
     }
   }
 
+  // results[titleIdx][modelIdx]
+  const results: Cell[][] = corpus.map(() => []);
+
+  // Fan out within each model: all corpus titles fire in parallel. Models
+  // iterate sequentially so log output stays grouped and the report header
+  // can show per-model progress as it completes.
+  for (let m = 0; m < models.length; m++) {
+    const { label, slug, model } = models[m]!;
+    const p = pricing.get(slug);
+    console.log(`\n→ ${label}`);
+    const cells = await Promise.all(
+      corpus.map((entry, i) =>
+        runCell(model, entry.title, p).then((cell) => {
+          const status = cell.ok ? `${cell.emojis}` : `ERR: ${cell.error}`;
+          const cost = cell.costUsd != null ? ` ${fmtCost(cell.costUsd)}` : "";
+          console.log(`   [${i + 1}/${corpus.length}] ${cell.latencyMs}ms${cost}  ${status}`);
+          return cell;
+        }),
+      ),
+    );
+    for (let i = 0; i < cells.length; i++) results[i]![m] = cells[i]!;
+  }
+
+  const grandTotal = results
+    .flat()
+    .reduce((sum, c) => sum + (c.costUsd ?? 0), 0);
+  console.log(`\nTotal spend: ${fmtCost(grandTotal)}`);
+
   const reportPath = resolve(__dirname, "results", "report.html");
   await mkdir(dirname(reportPath), { recursive: true });
-  await writeFile(reportPath, renderHtml(corpus, models, results));
-  console.log(`\nReport written to ${reportPath}`);
+  await writeFile(reportPath, renderHtml(corpus, models, results, grandTotal));
+  console.log(`Report written to ${reportPath}`);
   await open(reportPath);
+}
+
+async function fetchPricing(slugs: string[]): Promise<Map<string, ModelPricing>> {
+  const res = await fetch("https://openrouter.ai/api/v1/models");
+  if (!res.ok) {
+    throw new Error(`Failed to fetch OpenRouter pricing: ${res.status} ${res.statusText}`);
+  }
+  const json = (await res.json()) as {
+    data: Array<{ id: string; pricing?: { prompt?: string; completion?: string } }>;
+  };
+  const wanted = new Set(slugs);
+  const map = new Map<string, ModelPricing>();
+  for (const m of json.data) {
+    if (!wanted.has(m.id)) continue;
+    map.set(m.id, {
+      prompt: Number(m.pricing?.prompt ?? 0),
+      completion: Number(m.pricing?.completion ?? 0),
+    });
+  }
+  return map;
+}
+
+function fmtCost(usd: number): string {
+  if (usd === 0) return "$0";
+  // Sub-cent costs need enough precision to be meaningful.
+  const digits = usd >= 0.01 ? 4 : 6;
+  return `$${usd.toFixed(digits)}`;
 }
 
 async function runCell(
   model: ReturnType<typeof buildModels>[number]["model"],
   title: string,
+  pricing: ModelPricing | undefined,
 ): Promise<Cell> {
   const start = Date.now();
   try {
     const r = await pickEmojis({ model, title });
+    const inputTokens = r.usage?.inputTokens;
+    const outputTokens = r.usage?.outputTokens;
+    const costUsd = pricing
+      ? (inputTokens ?? 0) * pricing.prompt + (outputTokens ?? 0) * pricing.completion
+      : undefined;
     return {
       ok: true,
-      emojis: r.emojis.join(" "),
+      emojis: r.emojis.join(""),
       composed: composeTitle(title, r.emojis),
       raw: r.raw,
       latencyMs: Date.now() - start,
-      inputTokens: r.usage?.inputTokens,
-      outputTokens: r.usage?.outputTokens,
+      inputTokens,
+      outputTokens,
+      costUsd,
     };
   } catch (err) {
     return {
@@ -90,24 +152,28 @@ function renderHtml(
   corpus: CorpusEntry[],
   models: ReturnType<typeof buildModels>,
   results: Cell[][],
+  grandTotalUsd: number,
 ): string {
   const totals = models.map((_, m) => {
     let okCount = 0;
     let totalMs = 0;
     let totalInput = 0;
     let totalOutput = 0;
+    let totalCost = 0;
     for (let i = 0; i < corpus.length; i++) {
       const c = results[i]![m]!;
       totalMs += c.latencyMs;
       if (c.ok) okCount++;
       totalInput += c.inputTokens ?? 0;
       totalOutput += c.outputTokens ?? 0;
+      totalCost += c.costUsd ?? 0;
     }
     return {
       okCount,
       avgMs: Math.round(totalMs / corpus.length),
       totalInput,
       totalOutput,
+      totalCost,
     };
   });
 
@@ -119,10 +185,12 @@ function renderHtml(
           if (!c.ok) {
             return `<td class="err"><div class="msg">${escapeHtml(c.error ?? "")}</div><div class="meta">${c.latencyMs}ms</div></td>`;
           }
+          const tokens = c.outputTokens != null ? ` · ${c.outputTokens} tok` : "";
+          const cost = c.costUsd != null ? ` · ${escapeHtml(fmtCost(c.costUsd))}` : "";
           return `<td>
               <div class="emojis">${escapeHtml(c.emojis ?? "")}</div>
               <div class="composed">${escapeHtml(c.composed ?? "")}</div>
-              <div class="meta">${c.latencyMs}ms${c.outputTokens != null ? ` · ${c.outputTokens} tok` : ""}</div>
+              <div class="meta">${c.latencyMs}ms${tokens}${cost}</div>
             </td>`;
         })
         .join("");
@@ -143,7 +211,7 @@ function renderHtml(
   const footer = totals
     .map(
       (t) =>
-        `<td><div class="ok">${t.okCount}/${corpus.length} ok</div><div class="meta">avg ${t.avgMs}ms · in ${t.totalInput} · out ${t.totalOutput}</div></td>`,
+        `<td><div class="ok">${t.okCount}/${corpus.length} ok</div><div class="meta">avg ${t.avgMs}ms · in ${t.totalInput} · out ${t.totalOutput}</div><div class="cost">${escapeHtml(fmtCost(t.totalCost))}</div></td>`,
     )
     .join("");
 
@@ -169,6 +237,9 @@ function renderHtml(
   .meta { color: #777; font-size: 11px; margin-top: 4px; }
   .err { background: rgba(255, 0, 0, 0.06); }
   .err .msg { color: #b00; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; word-break: break-word; }
+  .cost { color: #333; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; margin-top: 4px; }
+  .grand { margin: 0 0 16px; color: #444; font-size: 13px; }
+  .grand b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   tfoot th, tfoot td { background: #f0f0f0; }
   @media (prefers-color-scheme: dark) {
     body { background: #111; color: #eee; }
@@ -181,11 +252,14 @@ function renderHtml(
     .err { background: rgba(255, 80, 80, 0.08); }
     .err .msg { color: #ff8a8a; }
     tfoot th, tfoot td { background: #1a1a1a; }
+    .cost { color: #ddd; }
+    .grand { color: #bbb; }
   }
 </style>
 </head>
 <body>
   <h1>pr-emojis bench · ${new Date().toISOString()}</h1>
+  <p class="grand">${corpus.length} titles × ${models.length} models = ${corpus.length * models.length} cells · total spend <b>${escapeHtml(fmtCost(grandTotalUsd))}</b></p>
   <table>
     <thead><tr><th>commit message</th>${headers}</tr></thead>
     <tbody>
