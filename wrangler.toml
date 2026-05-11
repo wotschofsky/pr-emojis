@@ -6,12 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 # Secrets are set with `wrangler secret put …`:
 #   GITHUB_APP_ID, GITHUB_WEBHOOK_SECRET, GITHUB_APP_PRIVATE_KEY, GOOGLE_GENERATIVE_AI_API_KEY
 
-# Per-PR concurrency locks. Create with:
-#   wrangler kv namespace create LOCKS
-# then paste the returned id below.
 [[kv_namespaces]]
 binding = "LOCKS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "pr_emojis"
 
 # Static landing page served from /public at /.
 [assets]
