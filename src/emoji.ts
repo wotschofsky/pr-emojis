@@ -119,6 +119,14 @@ export async function pickEmojis({
   const { text, usage } = await generateText({
     model,
     prompt: PROMPT_TEMPLATE(title),
+    // Disable Gemini's internal "thinking" — flash-lite otherwise burns
+    // thousands of reasoning tokens (10s+) before emitting the 2-token answer,
+    // which blows the 30s waitUntil budget.
+    providerOptions: {
+      google: {
+        thinkingConfig: { thinkingBudget: 0, includeThoughts: false },
+      },
+    },
   });
   const emojis = parseExactEmojiResponse(text);
   return {
