@@ -38,7 +38,7 @@ export async function processPr(
     log.set({ deferred: true });
     return;
   }
-  await env.LOCKS.put(lk, String(Date.now()), { expirationTtl: 30 });
+  await env.LOCKS.put(lk, String(Date.now()), { expirationTtl: 60 });
 
   try {
     const installation = await ghApp.getInstallationOctokit(installationId);
