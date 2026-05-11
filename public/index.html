@@ -8,116 +8,267 @@
       name="description"
       content="A GitHub App that prepends two funny, relevant emojis to every PR title. Install once, covers all repos."
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    />
+
     <style>
-      :root {
-        color-scheme: light dark;
-        --fg: #111;
-        --muted: #555;
-        --bg: #fafafa;
-        --card: #fff;
-        --accent: #1f6feb;
-        --border: #e5e5e5;
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
       }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --fg: #f0f0f0;
-          --muted: #aaa;
-          --bg: #0d0d0d;
-          --card: #161616;
-          --accent: #58a6ff;
-          --border: #262626;
-        }
-      }
-      * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; }
+      html,
       body {
-        font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter,
-          Helvetica, Arial, sans-serif;
-        color: var(--fg);
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        color-scheme: dark;
+        --fg: #e6e6e6;
+        --muted: #8a8a90;
+        --bg: #0b0b0c;
+        --card: #131316;
+        --border: #2a2a2e;
+        --accent: #6ee787;
+        --accent-2: #ffd566;
+      }
+      html {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
         background: var(--bg);
       }
+      a {
+        color: inherit;
+      }
+      img,
+      svg {
+        display: block;
+        max-width: 100%;
+      }
+
+      body {
+        color: var(--fg);
+        background: var(--bg);
+        min-height: 100dvh;
+        font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+        line-height: 1.55;
+      }
+
       main {
-        max-width: 640px;
+        max-width: 720px;
         margin: 0 auto;
-        padding: 64px 24px 80px;
+        padding: 56px 24px 80px;
       }
-      header h1 {
-        font-size: 44px;
-        margin: 0 0 8px;
+
+      .prompt {
+        color: var(--accent);
+        font-size: 13px;
+        margin: 0 0 24px;
+      }
+      .prompt::before {
+        content: "$ ";
+        opacity: 0.6;
+      }
+
+      h1 {
+        font-weight: 600;
+        font-size: clamp(30px, 5vw, 42px);
         letter-spacing: -0.02em;
+        margin: 0 0 16px;
+        max-width: 26ch;
+        text-wrap: balance;
+        line-height: 1.1;
       }
-      header p {
-        font-size: 18px;
+      h1 .accent {
+        color: var(--accent);
+      }
+
+      .lead {
+        font-size: 15px;
+        line-height: 1.65;
         color: var(--muted);
+        max-width: 64ch;
         margin: 0 0 32px;
+        text-wrap: pretty;
       }
+
       .example {
         background: var(--card);
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 16px 20px;
-        margin: 24px 0;
-        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-        font-size: 14px;
+        border-radius: 6px;
+        margin: 0 0 32px;
+        overflow: hidden;
       }
-      .example .before { color: var(--muted); text-decoration: line-through; }
-      .example .arrow { color: var(--muted); margin: 0 8px; }
+      .example .head {
+        font-size: 11px;
+        color: var(--muted);
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--border);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .example .body {
+        padding: 14px 18px;
+        font-size: 14px;
+        line-height: 1.8;
+      }
+      .example .minus {
+        color: #ff8589;
+      }
+      .example .plus {
+        color: var(--accent);
+      }
+      .example .before {
+        color: var(--muted);
+        text-decoration: line-through;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 0 0 48px;
+      }
       .cta {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
         background: var(--accent);
-        color: #fff;
+        color: #07140b;
         text-decoration: none;
         font-weight: 600;
-        padding: 12px 22px;
-        border-radius: 8px;
-        margin: 8px 0 32px;
+        padding: 12px 20px;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: filter 120ms ease;
       }
-      .cta:hover { filter: brightness(1.08); }
+      .cta:hover {
+        filter: brightness(1.08);
+      }
+      .cta:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+      .secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--accent-2);
+        text-decoration: none;
+        font-size: 14px;
+        padding: 12px 14px;
+      }
+      .secondary:hover {
+        text-decoration: underline;
+      }
+
       h2 {
-        font-size: 20px;
-        margin: 40px 0 8px;
-      }
-      ul { padding-left: 22px; }
-      li { margin: 4px 0; }
-      .small {
+        color: var(--accent);
         font-size: 13px;
-        color: var(--muted);
-        margin-top: 48px;
-        padding-top: 24px;
-        border-top: 1px solid var(--border);
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin: 40px 0 14px;
+      }
+      h2::before {
+        content: "# ";
+        opacity: 0.6;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      li {
+        font-size: 14px;
+        line-height: 1.65;
+        padding: 6px 0 6px 18px;
+        position: relative;
+        max-width: 70ch;
+      }
+      li::before {
+        content: "›";
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+      }
+
+      p {
+        font-size: 14px;
+        line-height: 1.65;
+        max-width: 70ch;
+        margin: 12px 0;
       }
       code {
-        background: var(--card);
-        border: 1px solid var(--border);
+        background: rgba(110, 231, 135, 0.1);
+        color: var(--accent);
         padding: 1px 6px;
-        border-radius: 4px;
+        border-radius: 3px;
         font-size: 13px;
       }
-      a { color: var(--accent); }
+
+      .footer {
+        margin-top: 56px;
+        padding-top: 20px;
+        border-top: 1px dashed var(--border);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .footer a {
+        color: var(--accent-2);
+        text-decoration: none;
+      }
+      .footer a:hover {
+        text-decoration: underline;
+      }
+
     </style>
   </head>
   <body>
     <main>
-      <header>
-        <h1>pr-emojis 🎉🚀</h1>
-        <p>
-          A GitHub App that prepends two funny, relevant emojis to every pull
-          request title. Install once — covers all your repos, present and
-          future.
-        </p>
-      </header>
+      <p class="prompt">github-app install pr-emojis</p>
+      <h1>
+        Two emojis on every PR title.
+        <span class="accent">🎉🚀</span>
+      </h1>
+      <p class="lead">
+        A GitHub App that prepends two funny, relevant emojis to every pull
+        request title. Install once — covers all your repos, present and
+        future.
+      </p>
 
       <div class="example">
-        <div><span class="before">Fix leak on error case</span></div>
-        <div>Fix leak on error case <span>💧🪣</span></div>
+        <div class="head">title.diff</div>
+        <div class="body">
+          <div>
+            <span class="minus">-</span>
+            <span class="before">Fix leak on error case</span>
+          </div>
+          <div>
+            <span class="plus">+</span> Fix leak on error case
+            <span>💧🪣</span>
+          </div>
+        </div>
       </div>
 
-      <a class="cta" href="https://github.com/apps/pr-emojis/installations/new">
-        Install on GitHub →
-      </a>
+      <div class="actions">
+        <a class="cta" href="https://github.com/apps/pr-emojis/installations/new"
+          >Install on GitHub →</a
+        >
+        <a class="secondary" href="https://github.com/wotschofsky/pr-emojis"
+          >View source ↗</a
+        >
+      </div>
 
       <h2>What it does</h2>
-      <ul>
+      <ul role="list">
         <li>Picks two relevant emojis for each new PR title and appends them.</li>
         <li>Re-runs if you rename the PR before the emojis are there.</li>
         <li>Skips titles that already end with emojis.</li>
@@ -125,13 +276,11 @@
       </ul>
 
       <h2>Permissions</h2>
-      <ul>
-        <li><code>pull_requests: write</code> — to read and patch PR titles.</li>
+      <ul role="list">
+        <li><code>pull_requests: write</code> — read and patch PR titles.</li>
         <li><code>metadata: read</code> — auto-granted, mandatory.</li>
       </ul>
-      <p>
-        No <code>contents</code> permission — the app cannot read your code.
-      </p>
+      <p>No <code>contents</code> permission — the app cannot read your code.</p>
 
       <h2>Privacy</h2>
       <p>
@@ -141,9 +290,11 @@
         secrets in PR bodies, that's data crossing third-party infrastructure.
       </p>
 
-      <p class="small">
-        Open source · MIT ·
-        <a href="https://github.com/felixwotschofsky/pr-emojis">source</a>
+      <p class="footer">
+        // MIT license ·
+        <a href="https://github.com/wotschofsky/pr-emojis"
+          >github.com/wotschofsky/pr-emojis</a
+        >
       </p>
     </main>
   </body>
