@@ -1,7 +1,7 @@
 {
   "name": "pr-emojis",
   "version": "0.1.0",
-  "description": "GitHub App that appends two relevant, funny emojis to PR titles.",
+  "description": "GitHub App that appends two relevant and fun emojis to PR titles.",
   "private": true,
   "license": "MIT",
   "type": "module",
