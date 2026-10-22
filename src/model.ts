@@ -1,17 +1,22 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenRouter, type OpenRouterChatSettings } from "@openrouter/ai-sdk-provider";
 import type { LanguageModel } from "ai";
 
-import type { Env } from "./env.ts";
-
 /**
- * Production model is fixed. If we ever need to swap providers, do it here
- * rather than via env — the choice is a code-level design decision.
+ * Shared routing defaults for production and the benchmark. Model choices are
+ * explicit code decisions rather than moving `latest` aliases.
  */
-export function makeModel(env: Env): LanguageModel {
-  const google = createGoogleGenerativeAI({
-    apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
-  });
-  // Pin the model: the `latest` alias can change request requirements without
-  // a deployment (including which thinking controls it accepts).
-  return google("gemini-3.5-flash-lite");
+export const OPENROUTER_SETTINGS = {
+  reasoning: { effort: "none", exclude: true },
+  provider: { sort: "latency", data_collection: "deny" },
+} satisfies OpenRouterChatSettings;
+
+export function makeModels(apiKey: string): LanguageModel[] {
+  const openrouter = createOpenRouter({ apiKey });
+  // Both endpoints require reasoning; use their lowest supported effort.
+  const settings = {
+    ...OPENROUTER_SETTINGS,
+    reasoning: { effort: "minimal", exclude: true },
+  } satisfies OpenRouterChatSettings;
+  return ["z-ai/glm-5.3-flash", "google/gemini-3.6-flash"]
+    .map((id) => openrouter.chat(id, settings));
 }

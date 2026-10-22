@@ -5,6 +5,7 @@ import open from "open";
 
 import { pickEmojis, composeTitle } from "../src/emoji.ts";
 import { buildModels } from "./models.ts";
+import { OPENROUTER_SETTINGS } from "../src/model.ts";
 
 interface CorpusEntry {
   repo: string;
@@ -57,36 +58,47 @@ async function main() {
   // results[titleIdx][modelIdx]
   const results: Cell[][] = corpus.map(() => []);
 
-  // Fan out within each model: all corpus titles fire in parallel. Models
-  // iterate sequentially so log output stays grouped and the report header
-  // can show per-model progress as it completes.
+  // Bound concurrency so the benchmark does not just measure a burst of
+  // rate-limited requests. Models run sequentially to keep output grouped.
   for (let m = 0; m < models.length; m++) {
     const { label, slug, model } = models[m]!;
     const p = pricing.get(slug);
     console.log(`\n→ ${label}`);
-    const cells = await Promise.all(
-      corpus.map((entry, i) =>
-        runCell(model, entry.title, p).then((cell) => {
-          const status = cell.ok ? `${cell.emojis}` : `ERR: ${cell.error}`;
-          const cost = cell.costUsd != null ? ` ${fmtCost(cell.costUsd)}` : "";
-          console.log(`   [${i + 1}/${corpus.length}] ${cell.latencyMs}ms${cost}  ${status}`);
-          return cell;
-        }),
-      ),
-    );
+    const cells: Cell[] = new Array(corpus.length);
+    let nextIndex = 0;
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      while (nextIndex < corpus.length) {
+        const i = nextIndex++;
+        const entry = corpus[i]!;
+        const cell = await runCell(model, entry.title, p);
+        const status = cell.ok ? `${cell.emojis}` : `ERR: ${cell.error}`;
+        const cost = cell.costUsd != null ? ` ${fmtCost(cell.costUsd)}` : "";
+        console.log(`   [${i + 1}/${corpus.length}] ${cell.latencyMs}ms${cost}  ${status}`);
+        cells[i] = cell;
+      }
+    }));
     for (let i = 0; i < cells.length; i++) results[i]![m] = cells[i]!;
   }
 
   const grandTotal = results
     .flat()
     .reduce((sum, c) => sum + (c.costUsd ?? 0), 0);
-  console.log(`\nTotal spend: ${fmtCost(grandTotal)}`);
+  console.log(`\nEstimated cost of successful responses: ${fmtCost(grandTotal)}`);
 
-  const reportPath = resolve(__dirname, "results", "report.html");
+  const resultsDir = resolve(__dirname, "results");
+  const reportPath = resolve(resultsDir, "report.html");
   await mkdir(dirname(reportPath), { recursive: true });
   await writeFile(reportPath, renderHtml(corpus, models, results, grandTotal));
+  await writeFile(resolve(resultsDir, "results.json"), JSON.stringify({
+    timestamp: new Date().toISOString(),
+    models: models.map(({ label, slug, reasoning }) => ({ label, slug, reasoning: reasoning ?? "none" })),
+    settings: OPENROUTER_SETTINGS,
+    corpus,
+    results,
+    grandTotalUsd: grandTotal,
+  }, null, 2));
   console.log(`Report written to ${reportPath}`);
-  await open(reportPath);
+  if (process.env.BENCH_OPEN_REPORT !== "0") await open(reportPath);
 }
 
 async function fetchPricing(slugs: string[]): Promise<Map<string, ModelPricing>> {
@@ -259,7 +271,7 @@ function renderHtml(
 </head>
 <body>
   <h1>pr-emojis bench · ${new Date().toISOString()}</h1>
-  <p class="grand">${corpus.length} titles × ${models.length} models = ${corpus.length * models.length} cells · total spend <b>${escapeHtml(fmtCost(grandTotalUsd))}</b></p>
+  <p class="grand">${corpus.length} titles × ${models.length} models = ${corpus.length * models.length} cells · estimated successful-response cost <b>${escapeHtml(fmtCost(grandTotalUsd))}</b> (excludes failed requests and fees)</p>
   <table>
     <thead><tr><th>commit message</th>${headers}</tr></thead>
     <tbody>

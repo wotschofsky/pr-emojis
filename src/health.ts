@@ -13,13 +13,13 @@ const REQUIRED_SECRETS = [
   "GITHUB_APP_ID",
   "GITHUB_APP_PRIVATE_KEY",
   "GITHUB_WEBHOOK_SECRET",
-  "GOOGLE_GENERATIVE_AI_API_KEY",
+  "OPENROUTER_API_KEY",
 ] as const satisfies readonly (keyof Env)[];
 
 /**
- * Verifies the worker has everything it needs to process a webhook end-to-end.
+ * Checks configuration, KV access, and local JWT signing.
  *
- * We deliberately skip a live call to the Google AI API — it's billable and
+ * We deliberately skip a live call to the OpenRouter API — it's billable and
  * adds latency. Presence of the key is enough; a real failure will surface
  * via webhook logs/alerting.
  */

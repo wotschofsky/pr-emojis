@@ -30,7 +30,7 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
     GITHUB_APP_ID: "12345",
     GITHUB_APP_PRIVATE_KEY: PRIVATE_KEY,
     GITHUB_WEBHOOK_SECRET: "webhook-secret",
-    GOOGLE_GENERATIVE_AI_API_KEY: "ai-key",
+    OPENROUTER_API_KEY: "ai-key",
     LOCKS: fakeKv(),
     ASSETS: {} as Fetcher,
     ...overrides,
@@ -50,14 +50,14 @@ describe("runHealthChecks", () => {
   it("flags each missing secret by name and skips JWT signing", async () => {
     const env = makeEnv({
       GITHUB_APP_PRIVATE_KEY: "",
-      GOOGLE_GENERATIVE_AI_API_KEY: "",
+      OPENROUTER_API_KEY: "",
     });
 
     const result = await runHealthChecks(env);
 
     expect(result.status).toBe("unhealthy");
     expect(result.failed).toContain("secret:GITHUB_APP_PRIVATE_KEY");
-    expect(result.failed).toContain("secret:GOOGLE_GENERATIVE_AI_API_KEY");
+    expect(result.failed).toContain("secret:OPENROUTER_API_KEY");
     expect(result.failed).toContain("github:jwt");
     expect(result.checks["secret:GITHUB_APP_ID"]).toBe("ok");
   });

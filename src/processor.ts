@@ -10,13 +10,12 @@ import {
 } from "./github.ts";
 import {
   composeTitle,
-  pickEmojis,
+  pickEmojisWithFallback,
   titleEndsWithEmoji,
   type PickEmojisResult,
 } from "./emoji.ts";
 import { lockKey, pendingKey } from "./locks.ts";
-import { makeModel } from "./model.ts";
-import { withRetry } from "./retry.ts";
+import { makeModels } from "./model.ts";
 import type { createApp } from "./github.ts";
 
 type AppType = ReturnType<typeof createApp>;
@@ -42,16 +41,16 @@ export async function processPr(
 
   try {
     const installation = await ghApp.getInstallationOctokit(installationId);
-    const model = makeModel(env);
+    const models = makeModels(env.OPENROUTER_API_KEY);
 
-    await runOnce(installation, model, refs, log);
+    await runOnce(installation, models, refs, log);
 
     // If a follow-up webhook arrived while we were running, re-process using
     // the now-current title rather than the one we held in memory.
     if (await env.LOCKS.get(pk)) {
       await env.LOCKS.delete(pk);
       log.set({ chained: true });
-      await runOnce(installation, model, refs, log);
+      await runOnce(installation, models, refs, log);
     }
   } finally {
     await env.LOCKS.delete(lk);
@@ -60,7 +59,7 @@ export async function processPr(
 
 async function runOnce(
   installation: InstallationClient,
-  model: LanguageModel,
+  models: LanguageModel[],
   refs: PullRefs,
   log: RequestLogger,
 ): Promise<void> {
@@ -72,9 +71,9 @@ async function runOnce(
 
   let result: PickEmojisResult;
   try {
-    result = await withRetry(() => pickEmojis({ model, title: baseTitle }), log);
+    result = await pickEmojisWithFallback(models, baseTitle, log);
   } catch (err) {
-    log.set({ outcome: "llm_failed_after_retries", error: String(err) });
+    log.set({ outcome: "llm_failed_after_fallback", error: String(err) });
     return;
   }
 
@@ -97,5 +96,7 @@ async function runOnce(
     outcome: "patched",
     emojis: result.emojis.join(""),
     usage: result.usage,
+    model: result.model,
+    llmLatencyMs: result.latencyMs,
   });
 }

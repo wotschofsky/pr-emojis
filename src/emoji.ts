@@ -51,9 +51,15 @@ export interface PickEmojisInput {
   title: string;
 }
 
+interface EmojiLogger {
+  set(fields: Record<string, unknown>): void;
+}
+
 export interface PickEmojisResult {
   emojis: [string, string];
   raw: string;
+  model: string;
+  latencyMs: number;
   usage?: {
     inputTokens?: number;
     outputTokens?: number;
@@ -108,35 +114,58 @@ export function parseExactEmojiResponse(s: string): [string, string] {
 }
 
 /**
- * Single attempt at picking two emojis. Throws on parse failure so the caller
- * can apply its retry policy. The caller also handles network / 5xx failures
- * thrown by the underlying provider.
+ * One bounded attempt at picking two emojis. Throws on invalid output or
+ * provider failure so the caller can try the fallback model.
  */
 export async function pickEmojis({
   model,
   title,
 }: PickEmojisInput): Promise<PickEmojisResult> {
-  const { text, usage } = await generateText({
+  const started = Date.now();
+  const { text, usage, response } = await generateText({
     model,
     prompt: PROMPT_TEMPLATE(title),
-    // Gemini 3 uses thinking levels rather than the Gemini 2.5 zero-token
-    // budget. Keep reasoning minimal for this small, latency-sensitive task.
-    providerOptions: {
-      google: {
-        thinkingConfig: { thinkingLevel: "minimal", includeThoughts: false },
-      },
-    },
+    maxRetries: 0,
+    maxOutputTokens: 1024,
+    abortSignal: AbortSignal.timeout(5_000),
   });
   const emojis = parseExactEmojiResponse(text);
   return {
     emojis,
     raw: text,
+    model: response.modelId,
+    latencyMs: Date.now() - started,
     usage: {
       inputTokens: usage?.inputTokens,
       outputTokens: usage?.outputTokens,
       totalTokens: usage?.totalTokens,
     },
   };
+}
+
+/** One bounded attempt per model, including fallback on invalid emoji output. */
+export async function pickEmojisWithFallback(
+  models: LanguageModel[],
+  title: string,
+  log: EmojiLogger,
+): Promise<PickEmojisResult> {
+  const attempts: Record<string, unknown>[] = [];
+  let lastError: unknown = new Error("No emoji models configured");
+  for (const model of models) {
+    const started = Date.now();
+    const modelId = typeof model === "string" ? model : model.modelId;
+    try {
+      const result = await pickEmojis({ model, title });
+      attempts.push({ model: result.model, latencyMs: result.latencyMs, outcome: "ok" });
+      log.set({ llmAttempts: attempts });
+      return result;
+    } catch (error) {
+      lastError = error;
+      attempts.push({ model: modelId, latencyMs: Date.now() - started, error: String(error) });
+      log.set({ llmAttempts: attempts });
+    }
+  }
+  throw lastError;
 }
 
 /**

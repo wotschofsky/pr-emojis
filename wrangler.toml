@@ -4,7 +4,7 @@ compatibility_date = "2025-09-15"
 compatibility_flags = ["nodejs_compat"]
 
 # Secrets are set with `wrangler secret put …`:
-#   GITHUB_APP_ID, GITHUB_WEBHOOK_SECRET, GITHUB_APP_PRIVATE_KEY, GOOGLE_GENERATIVE_AI_API_KEY
+#   GITHUB_APP_ID, GITHUB_WEBHOOK_SECRET, GITHUB_APP_PRIVATE_KEY, OPENROUTER_API_KEY
 
 [[kv_namespaces]]
 binding = "LOCKS"

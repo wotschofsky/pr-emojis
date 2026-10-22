@@ -2,5 +2,5 @@
 GITHUB_APP_ID="123456"
 GITHUB_WEBHOOK_SECRET="replace-with-a-long-random-string"
 # Paste the private-key PEM verbatim. Single line with literal \n is fine.
-GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----\n"
-GOOGLE_GENERATIVE_AI_API_KEY="your-google-ai-studio-key"
+GITHUB_APP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+OPENROUTER_API_KEY="your-openrouter-key"

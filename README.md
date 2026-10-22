@@ -1,6 +1,6 @@
 # pr-emojis
 
-A GitHub App that prepends two relevant and fun emojis to the title of every pull request. Install once on your account or org → every repo, present and future, is covered.
+A GitHub App that appends two relevant and fun emojis to the title of every pull request. Install once on your account or org → every repo, present and future, is covered.
 
 ```
 Fix leak on error case   →   Fix leak on error case 💧🪣
@@ -30,7 +30,8 @@ GitHub's `pull_request` webhook payload includes the PR title **and body**. This
 
 - Cloudflare Workers + Hono + TypeScript
 - [`octokit`](https://github.com/octokit/octokit.js) — App auth, webhook verification, REST
-- [Vercel AI SDK](https://sdk.vercel.ai) with `@ai-sdk/google` (Gemini 3.5 Flash-Lite, minimal thinking)
+- [Vercel AI SDK](https://sdk.vercel.ai) with `@openrouter/ai-sdk-provider`
+- GLM 5.3 Flash, falling back to Gemini 3.6 Flash; both use minimal reasoning
 - [`evlog`](https://www.evlog.dev) for wide-event request logging
 - Workers KV for per-PR concurrency locks
 - Vitest for focused utility tests
@@ -42,9 +43,8 @@ src/
   index.ts      — Hono app and /webhook route
   processor.ts  — background PR processing, lock orchestration, staleness logic
   github.ts     — octokit App factory + PR get/patch helpers
-  emoji.ts      — pickEmojis() + prompt + grapheme parser
+  emoji.ts      — bounded model attempts, fallback, prompt + grapheme parser
   locks.ts      — Workers KV key helpers
-  retry.ts      — retry policy
   model.ts      — production model construction
   logger.ts     — evlog wide-event setup
   env.ts        — typed bindings + secrets
@@ -92,10 +92,10 @@ Push the secrets — pipe the PEM in from a file so newlines are preserved (past
 wrangler secret put GITHUB_APP_ID
 wrangler secret put GITHUB_WEBHOOK_SECRET
 wrangler secret put GITHUB_APP_PRIVATE_KEY < your-app.pkcs8.pem
-wrangler secret put GOOGLE_GENERATIVE_AI_API_KEY
+wrangler secret put OPENROUTER_API_KEY
 ```
 
-After deploying, hit `/healthz` — it verifies all four secrets are present, KV is reachable, and a GitHub App JWT can actually be signed with the uploaded key. A 200 means you're wired up correctly; a 503 names the failed check.
+After deploying, hit `/healthz` — it verifies all four secrets are present, KV is reachable, and a GitHub App JWT can actually be signed with the uploaded key. It does not call OpenRouter or GitHub, so a 200 verifies configuration, not end-to-end processing. A 503 names the failed check.
 
 ### 3. Local dev
 
@@ -124,13 +124,15 @@ Point `pr-emojis.com` at the Worker, install the App on your account, watch new 
 
 ## Failure mode
 
-Every step is best-effort. On parse/network/5xx errors the LLM call is retried up to 3 times (4 attempts total). If all attempts fail we log it and silently return 200 — the PR is never blocked.
+The webhook returns 202 immediately and processes the PR in the background. Each model gets one attempt with a five-second deadline and no nested SDK retries. API errors, timeouts, and invalid emoji output all trigger the fallback model. If both fail, the PR is left untouched. Completion logs include the served model, latency, usage, and each attempt's error; they are emitted after background processing finishes.
+
+Models use explicit IDs, latency-prioritized provider routing, and `data_collection: "deny"`. The old Google API secret is no longer used. OpenRouter is an additional service that receives the PR title.
 
 ## Concurrency
 
 Rapid title edits can fire several `edited` webhooks for the same PR. Two layers guard against races:
 
-1. **Per-PR best-effort lock** in Workers KV (30s TTL). If a run is in flight, the new webhook flips a `pending` flag and returns. The in-flight run, on completion, sees the flag and processes the now-current title.
+1. **Per-PR best-effort lock** in Workers KV (60s TTL). If a run is in flight, the new webhook flips a `pending` flag and returns. The in-flight run, on completion, sees the flag and processes the now-current title.
 2. **Pre-PATCH staleness check.** We re-fetch the PR right before the PATCH. If the title has changed in the meantime, or already has emojis, we discard our LLM result. The user's edit always wins.
 
 ## Bake-off
@@ -141,7 +143,9 @@ The bake-off compares candidate models against the same prompt + parser used in 
 OPENROUTER_API_KEY=… pnpm bench
 ```
 
-Writes `bench/results/report.html` and opens it. Rows are commit messages, columns are models; the footer shows latency and token totals. Edit `bench/models.ts` to add or remove candidates.
+Writes `bench/results/report.html` plus machine-readable `results.json`, and opens the report. Rows are commit messages, columns are models; the footer shows latency and token totals. Four requests run concurrently, using the production parser, deadline, and routing defaults. Models that require reasoning use minimal effort. Costs estimate successful responses only and exclude failed requests and fees.
+
+Edit `bench/models.ts` to change candidates. Use `BENCH_MODELS` (comma-separated exact IDs) for a subset and `BENCH_OPEN_REPORT=0` for headless runs. Generated results stay local and are ignored by Git.
 
 ## License
 
