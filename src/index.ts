@@ -81,8 +81,13 @@ app.post("/webhook", async (c) => {
   // Fast 200 — work runs in background so we don't risk GitHub's 10s webhook
   // timeout. The lock + staleness check below still guarantee correctness even
   // if multiple webhooks fire in quick succession.
-  c.executionCtx.waitUntil(processPr(c.env, ghApp, installationId, refs, log));
-  log.emit({ status: 202 });
+  c.executionCtx.waitUntil(
+    processPr(c.env, ghApp, installationId, refs, log)
+      .catch((error: unknown) => {
+        log.set({ outcome: "processing_failed", error: String(error) });
+      })
+      .finally(() => log.emit({ status: 202 })),
+  );
   return c.text("accepted", 202);
 });
 
