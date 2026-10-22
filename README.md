@@ -30,7 +30,7 @@ GitHub's `pull_request` webhook payload includes the PR title **and body**. This
 
 - Cloudflare Workers + Hono + TypeScript
 - [`octokit`](https://github.com/octokit/octokit.js) — App auth, webhook verification, REST
-- [Vercel AI SDK](https://sdk.vercel.ai) with `@ai-sdk/google` (Gemma 4, free tier)
+- [Vercel AI SDK](https://sdk.vercel.ai) with `@ai-sdk/google` (Gemini 3.5 Flash-Lite, minimal thinking)
 - [`evlog`](https://www.evlog.dev) for wide-event request logging
 - Workers KV for per-PR concurrency locks
 - Vitest for focused utility tests

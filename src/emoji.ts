@@ -119,12 +119,11 @@ export async function pickEmojis({
   const { text, usage } = await generateText({
     model,
     prompt: PROMPT_TEMPLATE(title),
-    // Disable Gemini's internal "thinking" — flash-lite otherwise burns
-    // thousands of reasoning tokens (10s+) before emitting the 2-token answer,
-    // which blows the 30s waitUntil budget.
+    // Gemini 3 uses thinking levels rather than the Gemini 2.5 zero-token
+    // budget. Keep reasoning minimal for this small, latency-sensitive task.
     providerOptions: {
       google: {
-        thinkingConfig: { thinkingBudget: 0, includeThoughts: false },
+        thinkingConfig: { thinkingLevel: "minimal", includeThoughts: false },
       },
     },
   });

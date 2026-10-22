@@ -11,5 +11,7 @@ export function makeModel(env: Env): LanguageModel {
   const google = createGoogleGenerativeAI({
     apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
   });
-  return google("gemini-flash-lite-latest");
+  // Pin the model: the `latest` alias can change request requirements without
+  // a deployment (including which thinking controls it accepts).
+  return google("gemini-3.5-flash-lite");
 }
